@@ -1,0 +1,17 @@
+[project]
+name = "sibsau-pallada-timetable-parser"
+version = "0.1.0"
+description = "A Python library for parsing and retrieving timetables from the SibSAU Pallada system"
+authors = [{ name = "81d", email = "<artyom.mordovan@yandex.ru>" }]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "rapidfuzz (>=3.11.0,<4.0.0)",
+    "requests (>=2.32.3,<3.0.0)",
+    "bs4 (>=0.0.2,<0.0.3)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
