@@ -19,8 +19,8 @@ A Python library for parsing and retrieving timetables from the SibSAU Pallada s
 
 Clone the repository
 ```bash
-git clone <repository_url>
-cd <project_folder>
+git clone https://github.com/unknown81d/sibsau-pallada-timetable-parser.git
+cd sibsau-pallada-timetable-parser
 ```
 
 Create and activate virtual environment & Install dependencies
@@ -38,7 +38,7 @@ poetry run python3 src/__init__.py
 ### Basic Example
 
 ```python
-from src import get_by_search_query, fetch_database
+from search_results import get_by_search_query, fetch_database
 import group_parser
 import professor_parser
 ```
