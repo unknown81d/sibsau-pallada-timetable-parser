@@ -1,5 +1,5 @@
 import logging
-import requests
+import aiohttp
 from bs4 import BeautifulSoup
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
@@ -48,7 +48,11 @@ class Schedule:
     consultations: Optional[ConsultationSchedule] = None
 
 
-def _parse_schedule(html_content: str) -> Schedule:
+async def _parse_schedule(html_content: str) -> Schedule:
+    # The parsing logic remains the same since it's not I/O bound
+    return _parse_schedule_sync(html_content)
+
+def _parse_schedule_sync(html_content: str) -> Schedule:
     soup = BeautifulSoup(html_content, 'html.parser')
 
     # Extract professor name and academic year
@@ -205,14 +209,31 @@ def _parse_schedule(html_content: str) -> Schedule:
     return schedule
 
 
-def get_schedule_from_url(url: str) -> Schedule:
+async def get_schedule_from_url(url: str) -> Schedule:
     """
-    Fetches HTML content from a URL and parses it to extract schedule data.
+    Asynchronously fetches HTML content from a URL and parses it to extract schedule data.
     """
+    # Create a ClientSession with SSL verification disabled
+    conn = aiohttp.TCPConnector(ssl=False)
+    async with aiohttp.ClientSession(connector=conn) as session:
+        try:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                html_content = await response.text()
+                return await _parse_schedule(html_content)
+        except aiohttp.ClientError as e:
+            raise Exception(f"Failed to fetch URL: {e}")
+
+# Keep the synchronous version for compatibility
+def get_schedule_from_url_sync(url: str) -> Schedule:
+    """
+    Synchronously fetches HTML content from a URL and parses it to extract schedule data.
+    """
+    import requests
     try:
         response = requests.get(url)
         response.raise_for_status()
-        return _parse_schedule(response.text)
+        return _parse_schedule_sync(response.text)
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to fetch URL: {e}")
 
