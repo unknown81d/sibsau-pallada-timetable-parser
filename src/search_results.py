@@ -142,7 +142,7 @@ async def fetch_database(proxy_filepath: Optional[str] = None) -> SearchResultLi
     if proxy_filepath and os.path.exists(proxy_filepath):
         try:
             with open(proxy_filepath, 'r', encoding='utf-8') as f:
-                return SearchResultList(json.load(f), source="PROXY")
+                return SearchResultList(json.load(f), source=SourceType.PROXY)
         except Exception as e:
             logger.error(f"Failed to load proxy file {proxy_filepath}: {str(e)}")
 
@@ -190,7 +190,7 @@ async def fetch_database(proxy_filepath: Optional[str] = None) -> SearchResultLi
     # Filter out None results and exceptions
     data = [r for r in results if isinstance(r, dict)]
 
-    result_list = SearchResultList(data, source="RAW")
+    result_list = SearchResultList(data, source=SourceType.RAW)
 
     # Save to proxy file if path is provided
     if proxy_filepath:
@@ -216,7 +216,7 @@ def fetch_database_sync(proxy_filepath: Optional[str] = None) -> SearchResultLis
     if proxy_filepath and os.path.exists(proxy_filepath):
         try:
             with open(proxy_filepath, 'r', encoding='utf-8') as f:
-                return SearchResultList(json.load(f), source="PROXY")
+                return SearchResultList(json.load(f), source=SourceType.PROXY)
         except Exception as e:
             logger.warning(f"Failed to load proxy file {proxy_filepath}: {str(e)}")
 
@@ -250,7 +250,7 @@ def fetch_database_sync(proxy_filepath: Optional[str] = None) -> SearchResultLis
             logger.warning(f"Error fetching professor {id}: {str(e)}")
             continue
 
-    result_list = SearchResultList(data, source="RAW")
+    result_list = SearchResultList(data, source=SourceType.RAW)
 
     # Save to proxy file if path is provided
     if proxy_filepath:

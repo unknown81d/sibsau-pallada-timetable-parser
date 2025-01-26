@@ -54,7 +54,7 @@ print(database, database.source)
 database = await fetch_database()                            # without proxy
 database = await fetch_database("proxies/search_results.json") # with proxy
 
-print(database, database.source)
+print(database, database.source, database.source_date)
 # ... process database
 ```
 
@@ -64,7 +64,7 @@ Search for a group
 search_result = get_by_search_query(database, "группа")
 if search_result and search_result.type == "group":
     schedule = group_parser.get_schedule_from_url_sync(search_result.url, "proxies") # with proxy
-    # schedule = group_parser.get_schedule_from_url_sync(search_result.url) # without proxy
+    # schedule = group_parser.get_schedule_from_url_sync(search_result.url)          # without proxy
     print(schedule.source)
     print(schedule.source_date)
     print(f"Group: {schedule.group_name}")
@@ -75,11 +75,27 @@ if search_result and search_result.type == "group":
 search_result = get_by_search_query(database, "группа")
 if search_result and search_result.type == "group":
     schedule = await group_parser.get_schedule_from_url(search_result.url, "proxies") # with proxy
-    # schedule = await group_parser.get_schedule_from_url(search_result.url) # without proxy
+    # schedule = await group_parser.get_schedule_from_url(search_result.url)          # without proxy
     print(schedule.source)
     print(schedule.source_date)
     print(f"Group: {schedule.group_name}")
     print(f"Semester: {schedule.semester}")
+```
+
+Process changes (New)
+```python
+if schedule.source == group_parser.SourceType.CHANGED:
+    print("Changes detected:")
+    for change in schedule.changes:
+        if change.week_number:
+            print(f"Week {change.week_number}, {change.day_name}, {change.lesson_time}:")
+        else:
+            print(f"Session schedule, {change.day_name}, {change.lesson_time}:")
+        print(f"  {change.field}: {change.old_value} -> {change.new_value}")
+elif schedule.source == group_parser.SourceType.PROXY:
+    print("Loaded from cache")
+else:
+    print("Fresh data fetched")
 ```
 
 Search for a professor
@@ -88,7 +104,7 @@ Search for a professor
 search_result = get_by_search_query(database, "фамилия")
 if search_result and search_result.type == "professor":
     schedule = professor_parser.get_schedule_from_url_sync(search_result.url, "proxies") # with proxy
-    # schedule = professor_parser.get_schedule_from_url_sync(search_result.url) # without proxy
+    # schedule = professor_parser.get_schedule_from_url_sync(search_result.url)          # without proxy
     print(schedule.source)
     print(schedule.source_date)
     print(f"Professor: {schedule.person_name}")
@@ -99,11 +115,27 @@ if search_result and search_result.type == "professor":
 search_result = get_by_search_query(database, "фамилия")
 if search_result and search_result.type == "professor":
     schedule = await professor_parser.get_schedule_from_url(search_result.url, "proxies") # with proxy
-    # schedule = await professor_parser.get_schedule_from_url(search_result.url) # without proxy
+    # schedule = await professor_parser.get_schedule_from_url(search_result.url)          # without proxy
     print(schedule.source)
     print(schedule.source_date)
     print(f"Professor: {schedule.person_name}")
     print(f"Academic Year: {schedule.academic_year}")
+```
+
+Process changes (New)
+```python
+if schedule.source == professor_parser.SourceType.CHANGED:
+    print("Changes detected:")
+    for change in schedule.changes:
+        if change.week_number:
+            print(f"Week {change.week_number}, {change.day_name}, {change.lesson_time}:")
+        else:
+            print(f"Session schedule, {change.day_name}, {change.lesson_time}:")
+        print(f"  {change.field}: {change.old_value} -> {change.new_value}")
+elif schedule.source == professor_parser.SourceType.PROXY:
+    print("Loaded from cache")
+else:
+    print("Fresh data fetched")
 ```
 
 Check tests folder for more examples

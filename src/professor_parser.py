@@ -2,13 +2,14 @@ import logging
 import aiohttp
 from bs4 import BeautifulSoup
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any, Union
 import re
 from pathlib import Path
 import json
 import uuid
 from enum import Enum
 from datetime import datetime
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +45,18 @@ class ConsultationSchedule:
 
 
 class SourceType(Enum):
-    PROXY = "PROXY" # From filesystem cache
-    RAW = "RAW"     # From network request
+    PROXY = "proxy"     # From filesystem cache
+    RAW = "raw"        # From network request
+    CHANGED = "changed" # When changes detected between cache and new data
+
+@dataclass
+class Change:
+    field: str
+    old_value: Any
+    new_value: Any
+    lesson_time: str
+    day_name: str
+    week_number: Optional[int] = None  # None for session/consultation schedule
 
 @dataclass
 class Schedule:
@@ -56,11 +67,13 @@ class Schedule:
     consultations: Optional[ConsultationSchedule] = None
     source: SourceType = field(default=SourceType.RAW)
     source_date: datetime = field(default_factory=datetime.now)
+    changes: List[Change] = field(default_factory=list)
 
 def _generate_cache_filename(url: str) -> str:
-    """Generate a unique filename for caching"""
-    unique_id = str(uuid.uuid4())[:8]
-    return f"professor_{unique_id}.json"
+    """Generate a consistent filename for caching based on URL"""
+    # Extract professor ID from URL
+    professor_id = url.split('/')[-1]
+    return f"professor_{professor_id}.json"
 
 def _save_schedule_to_cache(schedule: Schedule, directory: Path, filename: str):
     """Save schedule to cache file"""
@@ -291,66 +304,150 @@ def _parse_schedule_sync(html_content: str) -> Schedule:
 
     return schedule
 
+def _compare_lessons(old_lesson: Lesson,
+                    new_lesson: Lesson,
+                    day_name: str,
+                    week_number: Optional[int] = None) -> List[Change]:
+    """Compare two lessons and return list of changes"""
+    changes = []
+    # Different fields for regular lessons and consultation lessons
+    fields_to_compare = ['time', 'name', 'groups', 'place', 'subgroup']
+
+    for field in fields_to_compare:
+        old_value = getattr(old_lesson, field)
+        new_value = getattr(new_lesson, field)
+        if old_value != new_value:
+            changes.append(Change(
+                field=field,
+                old_value=old_value,
+                new_value=new_value,
+                lesson_time=old_lesson.time,
+                day_name=day_name,
+                week_number=week_number
+            ))
+    return changes
+
+def _compare_schedules(old_schedule: Schedule, new_schedule: Schedule) -> List[Change]:
+    """Compare two schedules and return list of changes"""
+    changes = []
+
+    # Compare regular weeks
+    for old_week, new_week in zip(old_schedule.weeks, new_schedule.weeks):
+        for old_day, new_day in zip(old_week.days, new_week.days):
+            for old_lesson, new_lesson in zip(old_day.lessons, new_day.lessons):
+                changes.extend(_compare_lessons(
+                    old_lesson,
+                    new_lesson,
+                    old_day.day_name,
+                    old_week.week_number
+                ))
+
+    # Compare session schedule if exists
+    if old_schedule.session and new_schedule.session:
+        for old_day, new_day in zip(old_schedule.session.days, new_schedule.session.days):
+            for old_lesson, new_lesson in zip(old_day.lessons, new_day.lessons):
+                changes.extend(_compare_lessons(
+                    old_lesson,
+                    new_lesson,
+                    old_day.day_name
+                ))
+
+    # Compare consultation schedule if exists
+    if old_schedule.consultations and new_schedule.consultations:
+        for old_day, new_day in zip(old_schedule.consultations.days, new_schedule.consultations.days):
+            for old_lesson, new_lesson in zip(old_day.lessons, new_day.lessons):
+                changes.extend(_compare_lessons(
+                    old_lesson,
+                    new_lesson,
+                    old_day.day_name
+                ))
+
+    return changes
 
 async def get_schedule_from_url(url: str, directory: Optional[str] = None) -> Schedule:
     """
     Fetches schedule from URL or loads from cache if available.
-    If directory is provided, will try to load from cache first, otherwise fetch from network.
-    Returns Schedule object with source indicating whether it came from cache (PROXY) or network (RAW).
+    If changes are detected between cache and new data, returns schedule with CHANGED source
+    and list of changes.
     """
+    cached_schedule = None
+
     if directory:
         cache_dir = Path(directory)
         cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_files = list(cache_dir.glob("professor_*.json"))
+        cache_file = cache_dir / _generate_cache_filename(url)
 
-        if cache_files:
-            # Load from cache if available
-            return _load_schedule_from_cache(cache_files[0])
+        if cache_file.exists():
+            cached_schedule = _load_schedule_from_cache(cache_file)
 
-    # Fetch from network
+    # Fetch new data
     conn = aiohttp.TCPConnector(ssl=False)
     async with aiohttp.ClientSession(connector=conn) as session:
         try:
             async with session.get(url) as response:
                 response.raise_for_status()
                 html_content = await response.text()
-                schedule = await _parse_schedule(html_content)
-                schedule.source = SourceType.RAW
+                new_schedule = await _parse_schedule(html_content)
+                new_schedule.source = SourceType.RAW
 
-                # Save to cache if directory provided
+                # Compare with cache if exists
+                if cached_schedule:
+                    changes = _compare_schedules(cached_schedule, new_schedule)
+                    if changes:
+                        new_schedule.source = SourceType.CHANGED
+                        new_schedule.changes = changes
+                    else:
+                        new_schedule.source = SourceType.PROXY
+
+                # Save to cache, overwriting old cache
                 if directory:
-                    filename = _generate_cache_filename(url)
-                    _save_schedule_to_cache(schedule, Path(directory), filename)
+                    _save_schedule_to_cache(new_schedule, cache_dir, cache_file.name)
 
-                return schedule
+                return new_schedule
+
         except aiohttp.ClientError as e:
             raise Exception(f"Failed to fetch URL: {e}")
 
 def get_schedule_from_url_sync(url: str, directory: Optional[str] = None) -> Schedule:
     """
     Synchronous version of get_schedule_from_url.
+    Fetches schedule from URL or loads from cache if available.
+    If changes are detected between cache and new data, returns schedule with CHANGED source
+    and list of changes.
     """
-    import requests
+    cached_schedule = None
 
     if directory:
         cache_dir = Path(directory)
         cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_files = list(cache_dir.glob("professor_*.json"))
+        cache_file = cache_dir / _generate_cache_filename(url)
 
-        if cache_files:
-            return _load_schedule_from_cache(cache_files[0])
+        if cache_file.exists():
+            cached_schedule = _load_schedule_from_cache(cache_file)
 
     try:
         response = requests.get(url, verify=False)
         response.raise_for_status()
-        schedule = _parse_schedule_sync(response.text)
-        schedule.source = SourceType.RAW
+        new_schedule = _parse_schedule_sync(response.text)
+        new_schedule.source = SourceType.RAW
 
+        # Compare with cache if exists
+        if cached_schedule:
+            changes = _compare_schedules(cached_schedule, new_schedule)
+            if changes:
+                new_schedule.source = SourceType.CHANGED
+                new_schedule.changes = changes
+            else:
+                new_schedule.source = SourceType.PROXY
+
+        # Save to cache, overwriting old cache
         if directory:
-            filename = _generate_cache_filename(url)
-            _save_schedule_to_cache(schedule, Path(directory), filename)
+            _save_schedule_to_cache(new_schedule, cache_dir, cache_file.name)
 
-        return schedule
+        return new_schedule
+
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to fetch URL: {e}")
+
+
 
