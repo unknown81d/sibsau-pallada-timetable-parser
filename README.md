@@ -2,10 +2,8 @@
 
 A Python library for parsing and retrieving timetables from the SibSAU Pallada system. This tool allows you to fetch and parse schedules for both students and professors.
 
-![CleanShot 2025-01-26 at 22.01.23@2x](images/CleanShot%202025-01-26%20at%2022.01.23@2x.png)
 ![CleanShot 2025-01-26 at 22.01.35@2x](images/CleanShot%202025-01-26%20at%2022.01.35@2x.png)
 ![CleanShot 2025-01-26 at 22.01.51@2x](images/CleanShot%202025-01-26%20at%2022.01.51@2x.png)
-![CleanShot 2025-01-26 at 22.02.09@2x](images/CleanShot%202025-01-26%20at%2022.02.09@2x.png)
 
 ## Features
 
