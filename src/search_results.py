@@ -1,6 +1,8 @@
 import logging
 import asyncio
 import aiohttp
+import json
+import os
 from typing import Optional, List, Dict, TypedDict
 from rapidfuzz import fuzz
 
@@ -43,10 +45,20 @@ class SearchResult:
             "url": self.url
         }
 
-async def fetch_database() -> List[SearchResultDict]:
+async def fetch_database(proxy_filepath: Optional[str] = None) -> List[SearchResultDict]:
     """
     Asynchronously creates and returns a database of groups and professors.
+    If proxy_filepath is provided, attempts to load from file first.
     """
+    # Try to load from proxy file if path is provided
+    if proxy_filepath and os.path.exists(proxy_filepath):
+        try:
+            with open(proxy_filepath, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load proxy file {proxy_filepath}: {str(e)}")
+
+    # Fetch data from network
     data: List[SearchResultDict] = []
 
     async def fetch_group(id: int):
@@ -89,6 +101,19 @@ async def fetch_database() -> List[SearchResultDict]:
 
     # Filter out None results and exceptions
     data = [r for r in results if isinstance(r, dict)]
+
+    # Save to proxy file if path is provided
+    if proxy_filepath:
+        try:
+            # Create directory only if proxy_filepath has a directory component
+            directory = os.path.dirname(proxy_filepath)
+            if directory:
+                os.makedirs(directory, exist_ok=True)
+
+            with open(proxy_filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to save proxy file {proxy_filepath}: {str(e)}")
 
     return data
 

@@ -43,53 +43,54 @@ import sibsau_pallada_timetable_parser.src
 
 Fetch the database
 ```python
-database = fetch_database_sync()
-# ... proxy & process database
+# sync
+database = fetch_database_sync()                            # without proxy
+database = fetch_database_sync("tests/search_results.json") # with proxy
+# ... process database
+
+# async
+database = await fetch_database()                            # without proxy
+database = await fetch_database("tests/search_results.json") # with proxy
+# ... process database
 ```
 
 Search for a group
 ```python
+# sync
 search_result = get_by_search_query(database, "группа")
 if search_result:
     schedule = group_parser.get_schedule_from_url_sync(search_result.url)
         print(f"Group: {schedule.group_name}")
         print(f"Semester: {schedule.semester}")
 # ... process schedule data
+
+# async
+search_result = get_by_search_query(database, "группа")
+    if search_result:
+        schedule = await group_parser.get_schedule_from_url(search_result.url)
+        print(f"Group: {schedule.group_name}")
+        print(f"Semester: {schedule.semester}")
 ```
 
 Search for a professor
 ```python
+# sync
 search_result = get_by_search_query(database, "фамилия")
 if search_result:
     schedule = professor_parser.get_schedule_from_url_sync(search_result.url)
         print(f"Professor: {schedule.person_name}")
         print(f"Academic Year: {schedule.academic_year}")
 # ... process schedule data
-```
 
-### Async Usage Example
-
-```python
-import asyncio
-import sibsau_pallada_timetable_parser.src
-
-async def main():
-    database = await fetch_database()
-
-    search_result = get_by_search_query(database, "группа")
-    if search_result:
-        schedule = await group_parser.get_schedule_from_url(search_result.url)
-        print(f"Group: {schedule.group_name}")
-        print(f"Semester: {schedule.semester}")
-
-    search_result = get_by_search_query(database, "фамилия")
-    if search_result:
-        schedule = await professor_parser.get_schedule_from_url(search_result.url)
+# async
+search_result = get_by_search_query(database, "фамилия")
+if search_result:
+    schedule = await professor_parser.get_schedule_from_url(search_result.url)
         print(f"Professor: {schedule.person_name}")
         print(f"Academic Year: {schedule.academic_year}")
-
-asyncio.run(main())
 ```
+
+Check tests folder for more examples
 
 ## Contributing
 

@@ -9,7 +9,7 @@ import professor_parser
 import asyncio
 
 async def main():
-    database = await fetch_database()
+    database = await fetch_database("tests/search_results.json")
     print(database)
 
     search_result = get_by_search_query(database, "бпи23-01")
