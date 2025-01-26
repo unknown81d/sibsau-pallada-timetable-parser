@@ -8,6 +8,7 @@ from pathlib import Path
 import json
 import uuid
 from enum import Enum
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ class Schedule:
     session: Optional[SessionSchedule] = None
     consultations: Optional[ConsultationSchedule] = None
     source: SourceType = field(default=SourceType.RAW)
+    source_date: datetime = field(default_factory=datetime.now)
 
 def _generate_cache_filename(url: str) -> str:
     """Generate a unique filename for caching"""
@@ -78,7 +80,8 @@ def _save_schedule_to_cache(schedule: Schedule, directory: Path, filename: str):
             'consultations': {'days': [{'day_name': d.day_name,
                                       'lessons': [vars(l) for l in d.lessons]}
                                      for d in schedule.consultations.days]} if schedule.consultations else None,
-            'source': schedule.source.value
+            'source': schedule.source.value,
+            'source_date': schedule.source_date.isoformat()
         }
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -89,7 +92,8 @@ def _load_schedule_from_cache(cache_path: Path) -> Schedule:
         schedule = Schedule(
             person_name=data['person_name'],
             academic_year=data['academic_year'],
-            source=SourceType.PROXY
+            source=SourceType.PROXY,
+            source_date=datetime.fromisoformat(data['source_date'])
         )
 
         # Reconstruct weeks

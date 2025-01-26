@@ -66,6 +66,7 @@ if search_result and search_result.type == "group":
     schedule = group_parser.get_schedule_from_url_sync(search_result.url, "proxies") # with proxy
     # schedule = group_parser.get_schedule_from_url_sync(search_result.url) # without proxy
     print(schedule.source)
+    print(schedule.source_date)
     print(f"Group: {schedule.group_name}")
     print(f"Semester: {schedule.semester}")
 # ... process schedule data
@@ -76,6 +77,7 @@ if search_result and search_result.type == "group":
     schedule = await group_parser.get_schedule_from_url(search_result.url, "proxies") # with proxy
     # schedule = await group_parser.get_schedule_from_url(search_result.url) # without proxy
     print(schedule.source)
+    print(schedule.source_date)
     print(f"Group: {schedule.group_name}")
     print(f"Semester: {schedule.semester}")
 ```
@@ -88,6 +90,7 @@ if search_result and search_result.type == "professor":
     schedule = professor_parser.get_schedule_from_url_sync(search_result.url, "proxies") # with proxy
     # schedule = professor_parser.get_schedule_from_url_sync(search_result.url) # without proxy
     print(schedule.source)
+    print(schedule.source_date)
     print(f"Professor: {schedule.person_name}")
     print(f"Academic Year: {schedule.academic_year}")
 # ... process schedule data
@@ -98,6 +101,7 @@ if search_result and search_result.type == "professor":
     schedule = await professor_parser.get_schedule_from_url(search_result.url, "proxies") # with proxy
     # schedule = await professor_parser.get_schedule_from_url(search_result.url) # without proxy
     print(schedule.source)
+    print(schedule.source_date)
     print(f"Professor: {schedule.person_name}")
     print(f"Academic Year: {schedule.academic_year}")
 ```

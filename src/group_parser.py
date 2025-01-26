@@ -45,6 +45,7 @@ class Schedule:
     weeks: List[WeekSchedule] = field(default_factory=list)
     session: Optional[SessionSchedule] = None
     source: SourceType = field(default=SourceType.RAW)
+    source_date: datetime = field(default_factory=datetime.now)
 
 async def _parse_schedule(html_content: str) -> Schedule:
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -289,7 +290,6 @@ def _save_schedule_to_cache(schedule: Schedule, directory: Path, filename: str):
     """Save schedule to cache file"""
     cache_path = directory / filename
     with open(cache_path, 'w', encoding='utf-8') as f:
-        # Convert schedule to dict for JSON serialization
         data = {
             'group_name': schedule.group_name,
             'semester': schedule.semester,
@@ -301,7 +301,8 @@ def _save_schedule_to_cache(schedule: Schedule, directory: Path, filename: str):
             'session': {'days': [{'day_name': d.day_name,
                                 'lessons': [vars(l) for l in d.lessons]}
                                for d in schedule.session.days]} if schedule.session else None,
-            'source': schedule.source.value
+            'source': schedule.source.value,
+            'source_date': schedule.source_date.isoformat()
         }
         json.dump(data, f, ensure_ascii=False, indent=2)
 
@@ -312,7 +313,8 @@ def _load_schedule_from_cache(cache_path: Path) -> Schedule:
         schedule = Schedule(
             group_name=data['group_name'],
             semester=data['semester'],
-            source=SourceType.PROXY
+            source=SourceType.PROXY,
+            source_date=datetime.fromisoformat(data['source_date'])
         )
 
         # Reconstruct weeks

@@ -11,12 +11,14 @@ async def main():
     database = await fetch_database("tests/proxies/search_results.json")
     print(database)
     print(database.source)
+    print(database.source_date)
 
     search_result = database.get_by_search_query("бпи23-01")
     if search_result and search_result.type == "group":
         url = search_result.url
         schedule = await group_parser.get_schedule_from_url(url, "tests/proxies")
         print(schedule.source)
+        print(schedule.source_date)
         print(f"Group: {schedule.group_name}")
         print(f"Semester: {schedule.semester}")
         for week in schedule.weeks:
@@ -40,6 +42,7 @@ async def main():
         url = search_result.url
         schedule = await professor_parser.get_schedule_from_url(url, "tests/proxies")
         print(schedule.source)
+        print(schedule.source_date)
         print(f"Professor: {schedule.person_name}")
         print(f"Academic Year: {schedule.academic_year}")
         for week in schedule.weeks:

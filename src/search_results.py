@@ -5,6 +5,10 @@ import json
 import os
 from typing import Optional, List, Dict, TypedDict
 from rapidfuzz import fuzz
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from enum import Enum
 
 import group_parser
 import professor_parser
@@ -36,49 +40,6 @@ class SearchResult:
             "url": self.url
         }
 
-class SearchResultList(List[SearchResultDict]):
-    def __init__(self, items: List[SearchResultDict], source: str = "RAW"):
-        super().__init__(items)
-        self.source = source
-
-    def get_by_search_query(self, query: str) -> Optional[SearchResult]:
-        """
-        Search for data in the list using fuzzy string matching.
-        """
-        # Minimum similarity percentage (0-100) required for a match to be considered valid
-        MINIMUM_SIMILARITY_PERCENTAGE: int = 30
-
-        if not query or not self:
-            return None
-
-        best_match_score = 0
-        best_match_record = None
-        query_lower = query.lower()
-        latin_query = transliterate(query_lower)
-
-        for record in self:
-            name = record['name'].lower()
-
-            # Check for exact match first
-            if query_lower == name:
-                return SearchResult(**record)
-
-            # Apply fuzzy matching
-            latin_name = transliterate(name)
-            score = max(
-                fuzz.ratio(query_lower, name),
-                fuzz.ratio(latin_query, latin_name)
-            )
-
-            if score > best_match_score:
-                best_match_score = score
-                best_match_record = record
-
-        if best_match_record and best_match_score > MINIMUM_SIMILARITY_PERCENTAGE:
-            return SearchResult(**best_match_record)
-
-        return None
-
 def transliterate(text: str) -> str:
     """
     Transliterate text from Cyrillic to Latin characters.
@@ -94,6 +55,77 @@ def transliterate(text: str) -> str:
     }
 
     return ''.join(CYRILLIC_TO_LATIN.get(char, char) for char in text.lower())
+
+class SourceType(Enum):
+    PROXY = "PROXY"  # From filesystem cache
+    RAW = "RAW"      # From network request
+
+@dataclass
+class SearchResultList:
+    results: List[SearchResult] = field(default_factory=list)
+    source: SourceType = field(default=SourceType.RAW)
+    source_date: datetime = field(default_factory=datetime.now)
+
+    def get_by_search_query(self, query: str) -> Optional[SearchResult]:
+        """
+        Search for data in the list using fuzzy string matching.
+        """
+        # Minimum similarity percentage (0-100) required for a match to be considered valid
+        MINIMUM_SIMILARITY_PERCENTAGE: int = 30
+
+        if not query or not self.results:
+            return None
+
+        best_match_score = 0
+        best_match_record = None
+        query_lower = query.lower()
+        latin_query = transliterate(query_lower)
+
+        for record in self.results:
+            name = record['name'].lower()
+
+            # Check for exact match first
+            if query_lower == name:
+                return SearchResult(**record)
+
+            # Apply fuzzy matching
+            latin_name = transliterate(name)
+            score = max(
+                fuzz.ratio(query_lower, name),
+                fuzz.ratio(latin_query, latin_name)
+            )
+
+            if score > best_match_score:
+                best_match_score = score
+                best_match_record = SearchResult(**record)
+
+        if best_match_record and best_match_score > MINIMUM_SIMILARITY_PERCENTAGE:
+            return best_match_record
+
+        return None
+
+def _save_to_cache(results: SearchResultList, directory: Path, filename: str):
+    """Save search results to cache file"""
+    cache_path = directory / filename
+    with open(cache_path, 'w', encoding='utf-8') as f:
+        data = {
+            'results': [vars(r) for r in results.results],
+            'source': results.source.value,  # Save enum value
+            'source_date': results.source_date.isoformat()
+        }
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _load_from_cache(cache_path: Path) -> SearchResultList:
+    """Load search results from cache file"""
+    with open(cache_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        results = SearchResultList(
+            results=[SearchResult(**r) for r in data['results']],
+            source=SourceType(data['source']),  # Convert string back to enum
+            source_date=datetime.fromisoformat(data['source_date'])
+        )
+        return results
+
 
 # Constants for ID ranges
 PROFESSOR_ID_START = 13500
@@ -234,5 +266,4 @@ def fetch_database_sync(proxy_filepath: Optional[str] = None) -> SearchResultLis
             logger.warning(f"Failed to save proxy file {proxy_filepath}: {str(e)}")
 
     return result_list
-
 
