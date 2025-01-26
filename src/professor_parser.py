@@ -4,6 +4,10 @@ from bs4 import BeautifulSoup
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 import re
+from pathlib import Path
+import json
+import uuid
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +42,10 @@ class ConsultationSchedule:
     days: List[DaySchedule] = field(default_factory=list)
 
 
+class SourceType(Enum):
+    PROXY = "PROXY" # From filesystem cache
+    RAW = "RAW"     # From network request
+
 @dataclass
 class Schedule:
     person_name: str
@@ -45,7 +53,79 @@ class Schedule:
     weeks: List[WeekSchedule] = field(default_factory=list)
     session: Optional[SessionSchedule] = None
     consultations: Optional[ConsultationSchedule] = None
+    source: SourceType = field(default=SourceType.RAW)
 
+def _generate_cache_filename(url: str) -> str:
+    """Generate a unique filename for caching"""
+    unique_id = str(uuid.uuid4())[:8]
+    return f"professor_{unique_id}.json"
+
+def _save_schedule_to_cache(schedule: Schedule, directory: Path, filename: str):
+    """Save schedule to cache file"""
+    cache_path = directory / filename
+    with open(cache_path, 'w', encoding='utf-8') as f:
+        data = {
+            'person_name': schedule.person_name,
+            'academic_year': schedule.academic_year,
+            'weeks': [{'week_number': w.week_number,
+                      'days': [{'day_name': d.day_name,
+                               'lessons': [vars(l) for l in d.lessons]}
+                              for d in w.days]}
+                     for w in schedule.weeks],
+            'session': {'days': [{'day_name': d.day_name,
+                                'lessons': [vars(l) for l in d.lessons]}
+                               for d in schedule.session.days]} if schedule.session else None,
+            'consultations': {'days': [{'day_name': d.day_name,
+                                      'lessons': [vars(l) for l in d.lessons]}
+                                     for d in schedule.consultations.days]} if schedule.consultations else None,
+            'source': schedule.source.value
+        }
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def _load_schedule_from_cache(cache_path: Path) -> Schedule:
+    """Load schedule from cache file"""
+    with open(cache_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+        schedule = Schedule(
+            person_name=data['person_name'],
+            academic_year=data['academic_year'],
+            source=SourceType.PROXY
+        )
+
+        # Reconstruct weeks
+        for week_data in data['weeks']:
+            week = WeekSchedule(week_number=week_data['week_number'])
+            for day_data in week_data['days']:
+                day = DaySchedule(day_name=day_data['day_name'])
+                for lesson_data in day_data['lessons']:
+                    lesson = Lesson(**lesson_data)
+                    day.lessons.append(lesson)
+                week.days.append(day)
+            schedule.weeks.append(week)
+
+        # Reconstruct session if exists
+        if data['session']:
+            session = SessionSchedule()
+            for day_data in data['session']['days']:
+                day = DaySchedule(day_name=day_data['day_name'])
+                for lesson_data in day_data['lessons']:
+                    lesson = Lesson(**lesson_data)
+                    day.lessons.append(lesson)
+                session.days.append(day)
+            schedule.session = session
+
+        # Reconstruct consultations if exists
+        if data['consultations']:
+            consultations = ConsultationSchedule()
+            for day_data in data['consultations']['days']:
+                day = DaySchedule(day_name=day_data['day_name'])
+                for lesson_data in day_data['lessons']:
+                    lesson = Lesson(**lesson_data)
+                    day.lessons.append(lesson)
+                consultations.days.append(day)
+            schedule.consultations = consultations
+
+        return schedule
 
 async def _parse_schedule(html_content: str) -> Schedule:
     # The parsing logic remains the same since it's not I/O bound
@@ -208,31 +288,65 @@ def _parse_schedule_sync(html_content: str) -> Schedule:
     return schedule
 
 
-async def get_schedule_from_url(url: str) -> Schedule:
+async def get_schedule_from_url(url: str, directory: Optional[str] = None) -> Schedule:
     """
-    Asynchronously fetches HTML content from a URL and parses it to extract schedule data.
+    Fetches schedule from URL or loads from cache if available.
+    If directory is provided, will try to load from cache first, otherwise fetch from network.
+    Returns Schedule object with source indicating whether it came from cache (PROXY) or network (RAW).
     """
-    # Create a ClientSession with SSL verification disabled
+    if directory:
+        cache_dir = Path(directory)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_files = list(cache_dir.glob("professor_*.json"))
+
+        if cache_files:
+            # Load from cache if available
+            return _load_schedule_from_cache(cache_files[0])
+
+    # Fetch from network
     conn = aiohttp.TCPConnector(ssl=False)
     async with aiohttp.ClientSession(connector=conn) as session:
         try:
             async with session.get(url) as response:
                 response.raise_for_status()
                 html_content = await response.text()
-                return await _parse_schedule(html_content)
+                schedule = await _parse_schedule(html_content)
+                schedule.source = SourceType.RAW
+
+                # Save to cache if directory provided
+                if directory:
+                    filename = _generate_cache_filename(url)
+                    _save_schedule_to_cache(schedule, Path(directory), filename)
+
+                return schedule
         except aiohttp.ClientError as e:
             raise Exception(f"Failed to fetch URL: {e}")
 
-# Keep the synchronous version for compatibility
-def get_schedule_from_url_sync(url: str) -> Schedule:
+def get_schedule_from_url_sync(url: str, directory: Optional[str] = None) -> Schedule:
     """
-    Synchronously fetches HTML content from a URL and parses it to extract schedule data.
+    Synchronous version of get_schedule_from_url.
     """
     import requests
+
+    if directory:
+        cache_dir = Path(directory)
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        cache_files = list(cache_dir.glob("professor_*.json"))
+
+        if cache_files:
+            return _load_schedule_from_cache(cache_files[0])
+
     try:
-        response = requests.get(url)
+        response = requests.get(url, verify=False)
         response.raise_for_status()
-        return _parse_schedule_sync(response.text)
+        schedule = _parse_schedule_sync(response.text)
+        schedule.source = SourceType.RAW
+
+        if directory:
+            filename = _generate_cache_filename(url)
+            _save_schedule_to_cache(schedule, Path(directory), filename)
+
+        return schedule
     except requests.exceptions.RequestException as e:
         raise Exception(f"Failed to fetch URL: {e}")
 

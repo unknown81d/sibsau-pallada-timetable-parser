@@ -1,0 +1,116 @@
+[
+  {
+    "name": "БКТ23-02",
+    "type": "group",
+    "id": 13500,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13500"
+  },
+  {
+    "name": "БЛВ23-01",
+    "type": "group",
+    "id": 13501,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13501"
+  },
+  {
+    "name": "БЛЗ23-01",
+    "type": "group",
+    "id": 13502,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13502"
+  },
+  {
+    "name": "БЛС23-01",
+    "type": "group",
+    "id": 13503,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13503"
+  },
+  {
+    "name": "БЛСЗ23-01",
+    "type": "group",
+    "id": 13504,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13504"
+  },
+  {
+    "name": "БЛТ23-01",
+    "type": "group",
+    "id": 13505,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13505"
+  },
+  {
+    "name": "БЛТВ23-01",
+    "type": "group",
+    "id": 13506,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13506"
+  },
+  {
+    "name": "БЛХ23-01",
+    "type": "group",
+    "id": 13507,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/group/13507"
+  },
+  {
+    "name": "Проскурин А. В.",
+    "type": "professor",
+    "id": 3099,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3099"
+  },
+  {
+    "name": "Проскурин Г. А.",
+    "type": "professor",
+    "id": 3100,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3100"
+  },
+  {
+    "name": "Простов А. Я.",
+    "type": "professor",
+    "id": 3101,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3101"
+  },
+  {
+    "name": "Проходская М. А.",
+    "type": "professor",
+    "id": 3102,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3102"
+  },
+  {
+    "name": "Прохоров В. В.",
+    "type": "professor",
+    "id": 3103,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3103"
+  },
+  {
+    "name": "Прохорович Г. А.",
+    "type": "professor",
+    "id": 3104,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3104"
+  },
+  {
+    "name": "Проценко В. В.",
+    "type": "professor",
+    "id": 3105,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3105"
+  },
+  {
+    "name": "Прошутинская О. Л.",
+    "type": "professor",
+    "id": 3106,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3106"
+  },
+  {
+    "name": "Прусакова В. А.",
+    "type": "professor",
+    "id": 3107,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3107"
+  },
+  {
+    "name": "Прусс Л. В.",
+    "type": "professor",
+    "id": 3108,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3108"
+  },
+  {
+    "name": "Пряникова Е. В.",
+    "type": "professor",
+    "id": 3109,
+    "url": "https://timetable.pallada.sibsau.ru/timetable/professor/3109"
+  }
+]
