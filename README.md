@@ -44,15 +44,15 @@ import sibsau_pallada_timetable_parser.src
 Fetch the database
 ```python
 # sync
-database = fetch_database_sync()                            # without proxy
-database = fetch_database_sync("tests/search_results.json") # with proxy
+database = fetch_database_sync()                              # without proxy
+database = fetch_database_sync("proxies/search_results.json") # with proxy
 
 print(database, database.source)
 # ... process database
 
 # async
 database = await fetch_database()                            # without proxy
-database = await fetch_database("tests/search_results.json") # with proxy
+database = await fetch_database("proxies/search_results.json") # with proxy
 
 print(database, database.source)
 # ... process database
@@ -63,7 +63,9 @@ Search for a group
 # sync
 search_result = get_by_search_query(database, "группа")
 if search_result and search_result.type == "group":
-    schedule = group_parser.get_schedule_from_url_sync(search_result.url)
+    schedule = group_parser.get_schedule_from_url_sync(search_result.url, "proxies") # with proxy
+    # schedule = group_parser.get_schedule_from_url_sync(search_result.url) # without proxy
+    print(schedule.source)
     print(f"Group: {schedule.group_name}")
     print(f"Semester: {schedule.semester}")
 # ... process schedule data
@@ -71,7 +73,9 @@ if search_result and search_result.type == "group":
 # async
 search_result = get_by_search_query(database, "группа")
 if search_result and search_result.type == "group":
-    schedule = await group_parser.get_schedule_from_url(search_result.url)
+    schedule = await group_parser.get_schedule_from_url(search_result.url, "proxies") # with proxy
+    # schedule = await group_parser.get_schedule_from_url(search_result.url) # without proxy
+    print(schedule.source)
     print(f"Group: {schedule.group_name}")
     print(f"Semester: {schedule.semester}")
 ```
@@ -81,7 +85,9 @@ Search for a professor
 # sync
 search_result = get_by_search_query(database, "фамилия")
 if search_result and search_result.type == "professor":
-    schedule = professor_parser.get_schedule_from_url_sync(search_result.url)
+    schedule = professor_parser.get_schedule_from_url_sync(search_result.url, "proxies") # with proxy
+    # schedule = professor_parser.get_schedule_from_url_sync(search_result.url) # without proxy
+    print(schedule.source)
     print(f"Professor: {schedule.person_name}")
     print(f"Academic Year: {schedule.academic_year}")
 # ... process schedule data
@@ -89,7 +95,9 @@ if search_result and search_result.type == "professor":
 # async
 search_result = get_by_search_query(database, "фамилия")
 if search_result and search_result.type == "professor":
-    schedule = await professor_parser.get_schedule_from_url(search_result.url)
+    schedule = await professor_parser.get_schedule_from_url(search_result.url, "proxies") # with proxy
+    # schedule = await professor_parser.get_schedule_from_url(search_result.url) # without proxy
+    print(schedule.source)
     print(f"Professor: {schedule.person_name}")
     print(f"Academic Year: {schedule.academic_year}")
 ```
