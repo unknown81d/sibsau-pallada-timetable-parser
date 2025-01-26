@@ -7,7 +7,6 @@ import re
 
 logger = logging.getLogger(__name__)
 
-
 @dataclass
 class Lesson:
     time: str

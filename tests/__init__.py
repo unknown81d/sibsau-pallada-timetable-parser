@@ -1,19 +1,19 @@
+import asyncio
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
 
-from search_results import get_by_search_query, fetch_database
+from search_results import fetch_database, SearchResultList
 import group_parser
 import professor_parser
-
-import asyncio
 
 async def main():
     database = await fetch_database("tests/search_results.json")
     print(database)
+    print(database.source)
 
-    search_result = get_by_search_query(database, "бпи23-01")
-    if search_result:
+    search_result = database.get_by_search_query("бпи23-01")
+    if search_result and search_result.type == "group":
         url = search_result.url
         schedule = await group_parser.get_schedule_from_url(url)
         print(f"Group: {schedule.group_name}")
@@ -34,8 +34,8 @@ async def main():
         print("No search result found")
 
 
-    search_result = get_by_search_query(database, "проскурин")
-    if search_result:
+    search_result = database.get_by_search_query("проскурин")
+    if search_result and search_result.type == "professor":
         url = search_result.url
         schedule = await professor_parser.get_schedule_from_url(url)
         print(f"Professor: {schedule.person_name}")
