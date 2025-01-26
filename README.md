@@ -30,7 +30,7 @@ poetry install
 
 Run the script
 ```bash
-poetry run python3 src/__init__.py
+poetry run python3 tests/__init__.py
 ```
 
 ## Usage
@@ -38,9 +38,7 @@ poetry run python3 src/__init__.py
 ### Basic Example
 
 ```python
-from search_results import get_by_search_query, fetch_database
-import group_parser
-import professor_parser
+import sibsau_pallada_timetable_parser.src
 ```
 
 Fetch the database
@@ -73,8 +71,7 @@ if search_result:
 
 ```python
 import asyncio
-from search_results import get_by_search_query, fetch_database
-import group_parser
+import sibsau_pallada_timetable_parser.src
 
 async def main():
     database = await fetch_database()
@@ -85,7 +82,12 @@ async def main():
         print(f"Group: {schedule.group_name}")
         print(f"Semester: {schedule.semester}")
 
-# Run the async code
+    search_result = get_by_search_query(database, "фамилия")
+    if search_result:
+        schedule = await professor_parser.get_schedule_from_url(search_result.url)
+        print(f"Professor: {schedule.person_name}")
+        print(f"Academic Year: {schedule.academic_year}")
+
 asyncio.run(main())
 ```
 
